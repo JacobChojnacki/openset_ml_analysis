@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openset"
+version = "0.0.1"
+description = "Codebase for anomaly detection subject"
+requires-python = ">= 3.8, <= 3.12"
+dependencies = [
+    "torch ~= 2.1",
+    "pytorch-lightning ~= 2.1",
+    "torchmetrics ~= 1.2",
+    "scipy ~= 1.10",
+    "numpy ~= 1.24",
+    "adtk ~= 0.6.2",
+    "statsmodels ~= 0.14.1",
+    "pmdarima ~= 2.0.4",
+    "graphviz ~= 0.20.1",
+    "pyod ~= 1.1.3",
+    "requests ~= 2.31.0",
+    "scikit-learn",
+    "fasttext",
+    "h5py"
+]
+[project.urls]
+"Source" = "https://github.com/JacobChojnacki"
+
+
+[project.optional-dependencies]
+jupyter = [
+    "jupyterlab~=3.6",
+    "pandas ~= 2.0",
+    "matplotlib ~= 3.7",
+    "seaborn ~= 0.12",
+    "plotly ~= 5.14",
+]
+lint = ["ruff ~= 0.1", "pre-commit ~= 2.20"]
+test = [
+    "pytest ~= 7.1",
+    "pytest-cases ~= 3.6",
+    "pytest-cov ~= 3.0",
+    "pytest-xdist ~= 2.5",
+    "pytest-sugar ~= 0.9",
+]
+dev = ["openset[jupyter, lint, test]"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+select = [
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # pyflakes
+    "I", # isort
+    "C", # flake8-comprehensions
+    "B", # flake8-bugbear
+    # "UP",  # pyupgrade
+]
+line-length = 120
+ignore = [
+    # "E501", # line too long, handled by black
+    "B008", # do not perform function calls in argument defaults
+    "C901", # too complex
+    "W191", # indentation contains tabs
+]
+extend-exclude = [".venv/", "build/", "dist/", "docs/"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+[tool.ruff.lint.isort]
+order-by-type = true
+lines-between-types = 1
+combine-as-imports = true
+# known_first_party = "common"
