@@ -77,33 +77,9 @@ def visualize_outliers_lof(X_train, X_test, y_train, y_test, train_pred=None, te
         train_pred, train_score, model = detect_outliers(X_train, novelty=novelty, n_neighbors=n_neighbors,
                                                                contamination=contamination, leaf_size=leaf_size,
                                                                metric=metric, p=p)
-
-    # Plot confusion matrix and ROC curve
-    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-
-    # Title for the entire plot
-    fig.suptitle('Outlier Detection Using LOF', fontsize=16)
-
     # Plot training data
-    visualization_tool.plot_confusion_matrix(y_train, train_pred, ax=axes[0, 0])
-    axes[0, 0].set_title('Confusion Matrix - Training Data')
+    visualization_tool.plot_outlier_detection_results(model, X_train, y_train, X_test, y_test, train_pred=train_pred)
 
-    visualization_tool.plot_roc_curve(X_train, y_train, train_pred, ax=axes[0, 1])
-    axes[0, 1].set_title('ROC Curve - Training Data')
-
-    model.novelty = True
-    test_pred = model._predict(X_test)
-    test_pred[test_pred == 1] = 0  # inliers
-    test_pred[test_pred == -1] = 1  # outliers
-
-    # Plot testing data
-    visualization_tool.plot_confusion_matrix(y_test, test_pred, ax=axes[1, 0])
-    axes[1, 0].set_title('Confusion Matrix - Testing Data')
-
-    visualization_tool.plot_roc_curve(X_test, y_test, test_pred, ax=axes[1, 1])
-    axes[1, 1].set_title('ROC Curve - Testing Data')
-
-    plt.tight_layout()
-    plt.show()
+    return 0
 
 

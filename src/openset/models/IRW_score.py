@@ -1,64 +1,104 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# Autor: H.Maciejewski
-
-
-
 import numpy as np
 
-from numpy.random import default_rng
+from openset.tools import visualization_tool
 
 
-class IRWdepth():
-    '''Integrated Rank-Weighted depth
-    based on NIPS2022 paper P.Colombo et al., Beyond Mahalanobis-Based Scores for Textual OOD Detection
-    (Monte Carlo approximation - page 5 of main paper, and Algorithm A.1 on page 18 of Supplementary Material)
-    '''
+class IRWDepth:
+    """Integrated Rank-Weighted depth based on NIPS2022 paper P.Colombo et al.,
+    Beyond Mahalanobis-Based Scores for Textual OOD Detection (Monte Carlo approximation)
+    """
+
+    def __init__(self, contamination=0.1):
+        """
+        Initialize IRWDepth model.
+
+        Parameters:
+        - contamination (float): The proportion of outliers in the dataset.
+        """
+        self.contamination = contamination
+        self._threshold = 0.1
 
     def fit(self, X: np.ndarray, nproj=1000):
         """
-        X nxd - n training samples in d dimensions
-        nproj - number of random vectors of hypersphere S
+        Fit IRWDepth model to the training data.
+
+        Parameters:
+        - X (np.ndarray): Training samples with shape (n_samples, n_features).
+        - nproj (int): Number of random vectors of hypersphere S.
+
+        Returns:
+        - bool: True if the model is fitted successfully.
         """
+        self.n_samples, self.n_features = X.shape
         self.nproj = nproj
 
-        self.n = X.shape[0]
-        self.d = X.shape[1]
+        self.U = np.random.normal(size=(self.n_features, self.nproj))
+        self.U /= np.linalg.norm(self.U, axis=0)  # Normalize random vectors
 
-        self.U = np.empty((self.d, self.nproj))  # d x nproj, nproj random directions on hypersphere S^(d-1)
-        self.M = np.empty((self.n,
-                           self.nproj))  # = XU, n x nproj, element M[i,j] = <xi, Uj>, where xi = i-th row of X, Uj = j-th column of U
+        self.M = X @ self.U  # Compute M = XU
 
-        # generate U
-        rng = default_rng()
-        mi = np.zeros(self.d)
-        cov = np.identity(self.d)
-        U_ = rng.multivariate_normal(mi, cov, nproj).T
-        self.U = U_ / np.linalg.norm(U_, axis=0)  # normalized to length 1 - w sumie what for?
-        self.M = np.dot(X, self.U)
-
-        print(f'fitted IRWdepth model with {self.nproj} projections in {self.n} dimensions')
+        print(f'Fitted IRWDepth model with {self.nproj} projections in {self.n_features} dimensions.')
 
         return True
 
-    def score(self, x: np.ndarray) -> np.ndarray:  # formula D_IRW(x,Sn) on page 5 of NIPS paper
+    def score(self, x: np.ndarray) -> float:
+        """
+        Calculate IRWDepth score for a single sample.
 
-        v = np.dot(x, self.U)
+        Parameters:
+        - x (np.ndarray): Input sample with shape (n_features,).
+
+        Returns:
+        - float: IRWDepth score for the sample.
+        """
+        v = x @ self.U
         M_v = self.M - v
+        counts = np.minimum((M_v <= 0).sum(axis=0), (M_v > 0).sum(axis=0))
+        return counts.mean() / self.n_samples
 
-        suma = 0
-        for i in range(self.nproj):  # TODO: szybsza itearcja po kolumnach macierzy...
-            b = M_v[:, i]
-            suma += min((b <= 0).sum(), (b > 0).sum())
-            #print(min((b<=0).sum(), (b>0).sum()), suma)
+    def predict(self, X: np.ndarray, return_irw_scores=False) -> np.ndarray:
+        """
+        Predict labels (inliers or outliers) of input samples.
 
-        D_IRW = suma / (self.n * self.nproj)
+        Parameters:
+        - X (np.ndarray): Input samples with shape (n_samples, n_features).
+        - return_irw_scores (bool): Whether to return IRWDepth scores along with labels.
 
-        return D_IRW
+        Returns:
+        - np.ndarray: Predicted labels for input samples.
+        """
+        irw_scores = np.array([self.score(x) for x in X])
+
+        # Determine the threshold dynamically based on the actual proportion of outliers
+
+        # Classify samples
+        labels = np.where(irw_scores >= self._threshold, 0, 1)
+        if return_irw_scores:
+            return labels, irw_scores
+        else:
+            return labels
 
 
+def visualize_outliers_irw(X_train, X_test, y_train, y_test, train_pred=None, model=None):
+    """
+    Visualizes Outliers Detected by LOF (Local Outlier Factor) Algorithm
 
+    Parameters:
+        X_train (array-like): Training data features.
+        X_test (array-like): Testing data features.
+        y_train (array-like): Training data labels.
+        y_test (array-like): Testing data labels.
+        train_pred (array-like, optional): Predictions on training data. If None, predictions will be made.
+        test_pred (array-like, optional): Predictions on testing data. If None, predictions will be made.
+        contamination (float, optional): Proportion of outliers in the data. Default is 'auto'.
+        random_state (int, optional): Seed for random number generator. Defaults to 42.
+    """
+    # If predictions are not provided, make predictions
+    train_pred = model.predict(X_train) if train_pred is None else train_pred
+    visualization_tool.plot_outlier_detection_results(model, X_train, y_train, X_test, y_test, train_pred=train_pred,
+                                                      title="IRW")
 
-
-
+    return 0

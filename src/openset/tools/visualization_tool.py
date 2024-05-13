@@ -2,11 +2,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-from sklearn.metrics import RocCurveDisplay, confusion_matrix, roc_curve
+from openset.tools import dataset_tool
+from sklearn.metrics import RocCurveDisplay, confusion_matrix
 
 
 def plot_confusion_matrix(y_true, y_pred, normalize=True, cmap="coolwarm", figsize=(10, 8),
-                          annot_kws={"size": 10, "color": 'black'}, ax=None):
+                          annot_kws=None, ax=None):
+    if annot_kws is None:
+        annot_kws = {"size": 10, "color": 'black'}
     cm = confusion_matrix(y_true, y_pred, normalize='all' if normalize else None)
     n_classes = len(cm)
     palette = sns.color_palette(cmap, as_cmap=True)
@@ -22,7 +25,8 @@ def plot_confusion_matrix(y_true, y_pred, normalize=True, cmap="coolwarm", figsi
     ax.set_ylabel('True Label', fontsize=14)
 
 
-def plot_roc_curve(X, y, y_pred=None, pos_label=0, title="Receiver Operating Characteristic", color='darkorange', ax=None):
+def plot_roc_curve(X, y, y_pred=None, pos_label=0, title="Receiver Operating Characteristic", color='darkorange',
+                   ax=None):
     """
     Plot ROC curve for a given model.
 
@@ -35,7 +39,8 @@ def plot_roc_curve(X, y, y_pred=None, pos_label=0, title="Receiver Operating Cha
     - color: Color for the ROC curve.
     """
     sns.set_style("whitegrid")
-    roc_display = RocCurveDisplay.from_predictions(y_true=y, y_pred=y_pred, color=color, name="LOF", linestyle='-', linewidth=2, ax=ax)
+    RocCurveDisplay.from_predictions(y_true=y, y_pred=y_pred, color=color, name="LOF", linestyle='-',
+                                     linewidth=2, ax=ax)
     ax.plot([0, 1], [0, 1], color='gray', linestyle='--', linewidth=1)
     ax.set_xlabel("False Positive Rate", fontsize=12)
     ax.set_ylabel("True Positive Rate", fontsize=12)
@@ -43,15 +48,13 @@ def plot_roc_curve(X, y, y_pred=None, pos_label=0, title="Receiver Operating Cha
     ax.legend(title="Model", fontsize=10, title_fontsize=10, loc='lower right')
 
 
-def visualize_data_3d(df_subset, x, y, z, label, label_values):
-    fig = plt.figure(figsize=(12, 8))
-    ax = fig.add_subplot(111, projection='3d')
+def visualize_3d_data(df_subset, x, y, z, label, label_values, ax):
     df_misclassified = df_subset[df_subset['y'] != df_subset['y_pred']]
 
     colors = sns.color_palette("husl", 6)
     for idx, val in enumerate(label_values):
         subset = df_subset[df_subset[label] == val]
-        ax.scatter(subset[x], subset[y], subset[z], label=str(val), color=colors[idx+2], s=50, alpha=0.8)
+        ax.scatter(subset[x], subset[y], subset[z], label=str(val), color=colors[idx + 2], s=50, alpha=0.8)
 
     ax.scatter(df_misclassified[x], df_misclassified[y], df_misclassified[z],
                label='Misclassified', color='red', marker='x', s=100)
@@ -64,10 +67,8 @@ def visualize_data_3d(df_subset, x, y, z, label, label_values):
     ax.grid(True)  # Add grid for better perspective
     ax.view_init(elev=20, azim=45)  # Set view angle
 
-    plt.title("3D Visualization of Data with Labels")
-    plt.tight_layout()
-    plt.legend()
-    plt.show()
+    ax.set_title("3D Visualization of Data with Labels")
+    ax.legend()
 
 
 def plot_boxplot(train_scores,
@@ -114,4 +115,92 @@ def plot_boxplot(train_scores,
     ax.set_title('Distribution of Scores across Datasets')
 
     # Show plot
+    plt.show()
+
+
+def visualize_results_3D_plane(X_train, y_train, X_test, y_test, model, y_pred_train, lof=True, irw=False):
+    """
+    Visualizes the results  on train and test data using t-SNE for dimensionality reduction.
+
+    Parameters:
+    X_train (array-like): Training data features.
+    y_train (array-like): Training data labels.
+    X_test (array-like): Test data features.
+    y_test (array-like): Test data labels.
+    lof_model_g (object): Fitted Local Outlier Factor model.
+    lof_y_pred_train_g (array-like): Predicted labels for training data.
+    lof_y_pred_test_g (array-like): Predicted labels for test data.
+
+    Returns:
+    None
+    """
+    subset_train = dataset_tool.perform_tsne(X_train, y_train,
+                                             y_pred_train,
+                                             n_components=3,
+                                             random_state=42,
+                                             verbose=False)
+    if lof:
+        model.novelty = True
+        y_pred_test = model._predict(X_test)
+    else:
+        y_pred_test = model.predict(X_test)
+
+    if not irw:
+        y_pred_test[y_pred_test == 1] = 0  # inliers
+        y_pred_test[y_pred_test == -1] = 1  # outliers
+
+    subset_test = dataset_tool.perform_tsne(X_test, y_test,
+                                            y_pred_test,
+                                            n_components=3,
+                                            random_state=42,
+                                            verbose=False,
+                                            perplexity=len(X_test) - 1)
+
+    fig, axs = plt.subplots(1, 2, subplot_kw={"projection": "3d"}, figsize=(15, 10))
+    visualize_3d_data(subset_train,
+                      "tsne-1-d",
+                      "tsne-2-d",
+                      "tsne-3-d",
+                      "y",
+                      subset_train["y"].unique(),
+                      ax=axs[0])
+    visualize_3d_data(subset_test,
+                      "tsne-1-d",
+                      "tsne-2-d",
+                      "tsne-3-d",
+                      "y",
+                      subset_test["y"].unique(), ax=axs[1])
+
+
+def plot_outlier_detection_results(model, X_train, y_train, X_test, y_test, train_pred, title="LOF"):
+    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+
+    # Title for the entire plot
+    fig.suptitle(f'Outlier Detection Using {title}', fontsize=16)
+
+    # Plot training data
+    plot_confusion_matrix(y_train, train_pred, ax=axes[0, 0])
+    axes[0, 0].set_title('Confusion Matrix - Training Data')
+
+    plot_roc_curve(X_train, y_train, train_pred, ax=axes[0, 1])
+    axes[0, 1].set_title('ROC Curve - Training Data')
+
+    if title.lower() == "lof":
+        model.novelty = True
+        test_pred = model._predict(X_test)
+    else:
+        test_pred = model.predict(X_test)
+
+    if title.lower() != "irw":
+        test_pred[test_pred == 1] = 0  # inliers
+        test_pred[test_pred == -1] = 1  # outliers
+
+    # Plot testing data
+    plot_confusion_matrix(y_test, test_pred, ax=axes[1, 0])
+    axes[1, 0].set_title('Confusion Matrix - Testing Data')
+
+    plot_roc_curve(X_test, y_test, test_pred, ax=axes[1, 1])
+    axes[1, 1].set_title('ROC Curve - Testing Data')
+
+    plt.tight_layout()
     plt.show()
