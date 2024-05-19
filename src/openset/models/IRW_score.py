@@ -98,7 +98,8 @@ def visualize_outliers_irw(X_train, X_test, y_train, y_test, train_pred=None, mo
     """
     # If predictions are not provided, make predictions
     train_pred = model.predict(X_train) if train_pred is None else train_pred
-    visualization_tool.plot_outlier_detection_results(model, X_train, y_train, X_test, y_test, train_pred=train_pred,
-                                                      title="IRW")
+    visualization_tool.plot_outlier_detection_results(
+        model, X_train, y_train, X_test, y_test, train_pred=train_pred, title='IRW'
+    )
 
     return 0

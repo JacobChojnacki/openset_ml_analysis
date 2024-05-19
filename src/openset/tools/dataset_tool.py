@@ -48,6 +48,3 @@ def perform_tsne(X_train, y_train, y_pred, n_components=3, random_state=0, verbo
     df_subset['y'] = y_train
     df_subset['y_pred'] = y_pred
     return df_subset
-
-
-

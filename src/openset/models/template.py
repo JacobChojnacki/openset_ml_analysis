@@ -12,7 +12,7 @@ def fit_model(model, X_train):
     """
     start_time = time.time()
     model.fit(X_train)
-    print("Model fitting completed in %.2f seconds." % (time.time() - start_time))
+    print('Model fitting completed in %.2f seconds.' % (time.time() - start_time))
 
 
 def score_data(model, data):
@@ -28,7 +28,7 @@ def score_data(model, data):
     """
     try:
         scores = [model.score(row) for row in data]
-    except Exception as e:
+    except Exception:
         scores = model.score_samples(data)
     return scores
 
@@ -51,11 +51,11 @@ def fit_and_score_model(model, X_train, X_test, y_train):
     """
     fit_model(model, X_train)
 
-    print("Scoring train data...")
+    print('Scoring train data...')
     train_scores = score_data(model, X_train)
-    print("Scoring test data...")
+    print('Scoring test data...')
     test_scores = score_data(model, X_test)
-    print("Scoring out-of-distribution data...")
+    print('Scoring out-of-distribution data...')
     ood_scores = score_data(model, X_train[y_train.T[0] == 1])
 
     return train_scores, test_scores, ood_scores

@@ -2,10 +2,7 @@ from openset.tools import visualization_tool
 from sklearn.covariance import EllipticEnvelope
 
 
-def detect_outliers(X_train,
-                    contamination: float = 0.1,
-                    random_state: int = 42
-                    ):
+def detect_outliers(X_train, contamination: float = 0.1, random_state: int = 42):
     """
     Detect outliers in a dataset using Eliptic Envelope algorithm.
 
@@ -25,8 +22,8 @@ def detect_outliers(X_train,
         Outlier scores.
     """
     # Initialize and fit the model
-    model = EllipticEnvelope(contamination=contamination,
-                             random_state=random_state)
+    model = EllipticEnvelope(contamination=contamination, random_state=random_state)
+
     y_pred = model.fit_predict(X_train)
 
     # Convert outlier labels
@@ -38,9 +35,9 @@ def detect_outliers(X_train,
     return y_pred, model
 
 
-def visualize_outliers_mahalanobis(X_train, X_test, y_train, y_test, train_pred=None, test_pred=None,
-                                   contamination=0.1,
-                                   random_state: int = 42):
+def visualize_outliers_mahalanobis(
+    X_train, X_test, y_train, y_test, train_pred=None, test_pred=None, contamination=0.1, random_state: int = 42
+):
     """
     Visualizes Outliers Detected by LOF (Local Outlier Factor) Algorithm
 
@@ -56,11 +53,10 @@ def visualize_outliers_mahalanobis(X_train, X_test, y_train, y_test, train_pred=
     """
     # If predictions are not provided, make predictions
     if train_pred is None or test_pred is None:
-        train_pred, model = detect_outliers(X_train,
-                                            contamination=contamination,
-                                            random_state=random_state)
+        train_pred, model = detect_outliers(X_train, contamination=contamination, random_state=random_state)
         # Plot training data
-    visualization_tool.plot_outlier_detection_results(model, X_train, y_train, X_test, y_test, train_pred=train_pred,
-                                                      title="Mahalanobis")
+    visualization_tool.plot_outlier_detection_results(
+        model, X_train, y_train, X_test, y_test, train_pred=train_pred, title='Mahalanobis'
+    )
 
     return 0
